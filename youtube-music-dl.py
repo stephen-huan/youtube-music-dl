@@ -93,11 +93,14 @@ def download_playlist(bid: str, artist: str=None) -> None:
               if artist is None else artist
     title = album["title"]
 
-    path = artists.replace("/", "-") 
-    if not os.path.exists(path):
-        os.mkdir(path)
+    path = artists.replace("/", "-")
+    
+    if len(path) > 0:
+        if not os.path.exists(path):
+            os.mkdir(path)
+        path += "/"
 
-    path += "/" + title.replace("/", "-")
+    path += title.replace("/", "-")
     if not os.path.exists(path):
         os.mkdir(path)
     path += "/"
