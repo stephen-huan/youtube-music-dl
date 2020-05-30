@@ -71,7 +71,7 @@ def download_song(sid: str, artist: str=None, album_artist: str=None,
     f.tag.release_date = date
     f.tag.save()
 
-    os.rename(f"{sid}.mp3", f"{path}{track}_{title}.mp3")
+    os.rename(f"{sid}.mp3", f"{path}{track}_{title.replace('/', '-')}.mp3")
 
     cache.add(sid)
     db.save_db(cache)
