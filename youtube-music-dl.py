@@ -159,10 +159,10 @@ if __name__ == "__main__":
         if os.path.exists(args.file):
             with open(args.file) as f:
                 for line in f:
-                    line = line.strip()
-                    if len(line) > 0:
-                        print(f"Processing URL {line}")
-                        download_url(line)
+                    url = line.split("#")[0].strip()
+                    if len(url) > 0:
+                        print(f"Processing URL {url}")
+                        download_url(url)
         else:
             print("Input file is not a valid path!")
 
