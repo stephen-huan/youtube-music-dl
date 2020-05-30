@@ -78,7 +78,7 @@ def download_song(sid: str, artist: str=None, album_artist: str=None,
 
 def download_playlist(bid: str) -> None:
     """ Downloads a playlist. """
-    if args.cache and bid in cache:
+    if args.playlist_cache and bid in cache:
         print(f"Playlist {bid} is cached.")
         return
 
@@ -125,6 +125,9 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--force", dest="cache", 
                         action="store_false", default=True,
                         help="disable cache")
+    parser.add_argument("-l", "--list", dest="playlist_cache", 
+                        action="store_false", default=True,
+                        help="disable playlist cache")
     args = parser.parse_args()
     content, ID = get_type(args.url)
     {ARTIST: download_artist, PLAYLIST: download_playlist, SONG: download_song}[content](ID)
