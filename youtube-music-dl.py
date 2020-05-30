@@ -54,7 +54,11 @@ def download_song(sid: str, artist: str=None, album_artist: str=None,
     if args.cache and sid in cache:
         print("Song is cached.")
         return 
-    
+
+    if sid is None:
+        print("Cannot download song.")
+        return
+
     print(f"Downloading song {title}")
     subprocess.run(["youtube-dl", "--add-metadata",
                     "--extract-audio", "--audio-format", "mp3",
