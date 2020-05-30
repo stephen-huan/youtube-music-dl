@@ -12,4 +12,4 @@ def load_db() -> set:
 def save_db(data: set) -> None:
     """ Stores an updated version to the database. """
     with open(DB, "w") as f:
-        json.dump(list(data), f)
+        json.dump(sorted(data), f, sort_keys=True, indent=4)

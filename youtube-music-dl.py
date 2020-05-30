@@ -20,8 +20,8 @@ sys.argv = sys.argv[:-1]
 # setup youtube music
 # YTMusic.setup(filepath="headers_auth.json")
 # ytmusic = YTMusic("headers_auth.json")
-
 ytmusic = YTMusic()
+
 cache = db.load_db()
 
 ARTIST, PLAYLIST, SONG = 0, 1, 2
@@ -49,9 +49,10 @@ def get_type(url: str) -> tuple:
 
 def download_song(sid: str, artist: str=None, album_artist: str=None, 
                   title: str="song", album_title: str="",
-                  track: int=1, date: str=None, path: str="") -> None:
+                  track: int=1, date: str=None, 
+                  path: str="", pid: str="") -> None:
     """ Downloads a song. """
-    if args.cache and sid in cache:
+    if args.cache and f"{pid}|{sid}" in cache:
         print("Song is cached.")
         return 
 
@@ -59,35 +60,37 @@ def download_song(sid: str, artist: str=None, album_artist: str=None,
         print("Cannot download song.")
         return
 
-    print(f"Downloading song {title}")
-    subprocess.run(["youtube-dl", "--add-metadata",
-                    "--extract-audio", "--audio-format", "mp3",
-                    "--output", "%(id)s.%(ext)s", 
-                    f"https://www.youtube.com/watch?v={sid}"])
+    print(f"Downloading song {title} with id {sid}")
+    if not args.dry:
+        subprocess.run(["youtube-dl", "--add-metadata",
+                        "--extract-audio", "--audio-format", "mp3",
+                        "--output", "%(id)s.%(ext)s", 
+                        f"https://www.youtube.com/watch?v={sid}"])
 
-    f = eyed3.load(f"{sid}.mp3")
-    f.tag.artist = artist
-    f.tag.album = album_title
-    f.tag.album_artist = album_artist
-    f.tag.title = title
-    f.tag.track_num = track
-    # yyyy-mm-dd format for date
-    f.tag.release_date = date
-    f.tag.save()
+        f = eyed3.load(f"{sid}.mp3")
+        f.tag.artist = artist
+        f.tag.album = album_title
+        f.tag.album_artist = album_artist
+        f.tag.title = title
+        f.tag.track_num = track
+        # yyyy-mm-dd format for date
+        f.tag.release_date = date
+        f.tag.save()
 
-    os.rename(f"{sid}.mp3", f"{path}{track}_{title.replace('/', '-')}.mp3")
+        os.rename(f"{sid}.mp3", f"{path}{track}_{title.replace('/', '-')}.mp3")
 
-    cache.add(sid)
+    cache.add(f"{pid}|{sid}")
     db.save_db(cache)
 
-def download_playlist(bid: str) -> None:
+def download_playlist(bid: str, artist: str=None) -> None:
     """ Downloads a playlist. """
     if args.playlist_cache and bid in cache:
         print(f"Playlist {bid} is cached.")
         return
 
     album = ytmusic.get_album(bid)
-    artists = ", ".join(a["name"] for a in album["artist"])
+    artists = ", ".join(a["name"] for a in album["artist"]) \
+              if artist is None else artist
     title = album["title"]
 
     path = artists.replace("/", "-") 
@@ -102,10 +105,11 @@ def download_playlist(bid: str) -> None:
     rd = album["releaseDate"]
     date = f"{rd['year']}{rd['month']}{rd['day']}"
 
-    print(f"Downloading playlist {title}")
+    print(f"Downloading playlist {title} with id {bid}")
     for song in album["tracks"]:
         download_song(song["videoId"], song["artists"], artists,
-                      song["title"], title, int(song["index"]), date, path)
+                      song["title"], title, int(song["index"]), date, 
+                      path, bid)
 
     cache.add(bid)
     db.save_db(cache)
@@ -115,24 +119,52 @@ def download_artist(aid: str) -> None:
     info = ytmusic.get_artist(aid)
     albums = info["albums"]
     singles = info["singles"]
+    artist = info["name"] if args.overwrite else None
     for album in albums["results"]:
-        download_playlist(album["browseId"])
+        download_playlist(album["browseId"], artist)
     # singles are just playlists with one song in them
     for single in singles["results"]:
-        download_playlist(single["browseId"])
+        download_playlist(single["browseId"], artist)
+
+def download_url(url: str) -> None:
+    """ Downloads the url. """
+    content, ID = get_type(url)
+    {ARTIST: download_artist, PLAYLIST: download_playlist, SONG: download_song}[content](ID)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="youtube-music-dl")
     parser.add_argument("-v", "--version", action="version", version="1.0.0")
-    parser.add_argument("-u", "--url", dest="url", type=str, required=True,
+    parser.add_argument("-u", "--url", dest="url", type=str,
                         help="specifies the URL to download from")
     parser.add_argument("-f", "--force", dest="cache", 
                         action="store_false", default=True,
-                        help="disable cache")
+                        help="disable song cache")
     parser.add_argument("-l", "--list", dest="playlist_cache", 
                         action="store_false", default=True,
                         help="disable playlist cache")
+    parser.add_argument("-o", "--overwrite", dest="overwrite", 
+                        action="store_false", default=True,
+                        help="don't overwrite the 'album_artist' tag")
+    parser.add_argument("-s", "--simulate", dest="dry", 
+                        action="store_true", default=False,
+                        help="don't actually download music")
+    parser.add_argument("-i", "--input", dest="file", 
+                        help="read URLs from a file")
     args = parser.parse_args()
-    content, ID = get_type(args.url)
-    {ARTIST: download_artist, PLAYLIST: download_playlist, SONG: download_song}[content](ID)
+
+    if args.file is not None:
+        if os.path.exists(args.file):
+            with open(args.file) as f:
+                for line in f:
+                    line = line.strip()
+                    if len(line) > 0:
+                        print(f"Processing URL {line}")
+                        download_url(line)
+        else:
+            print("Input file is not a valid path!")
+
+    elif args.url is not None:
+        download_url(args.url)
+    else:
+        print("Nothing to do!")
 
