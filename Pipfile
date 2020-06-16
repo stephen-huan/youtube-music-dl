@@ -10,6 +10,9 @@ youtube-dl = "*"
 eyed3 = "*"
 requests-html = "*"
 ytmusicapi = "*"
+audio2numpy = "*"
+numpy = "*"
+scipy = "*"
 
 [requires]
 python_version = "3.8"
