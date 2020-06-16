@@ -1,4 +1,5 @@
 import argparse, os, sys, subprocess, datetime
+import requests
 from requests_html import HTMLSession
 from ytmusicapi import YTMusic
 # import youtube_dl
@@ -65,7 +66,7 @@ def parse_artists(artists: list) -> str:
 def download_song(sid: str, artist: str=None, album_artist: str=None, 
                   title: str="song", album_title: str="",
                   track: int=1, date: str=None, 
-                  path: str="", pid: str="") -> None:
+                  path: str="", pid: str="", thumbnail_url: str=None) -> None:
     """ Downloads a song. """
     if args.cache and f"{pid}|{sid}" in cache:
         print("Song is cached.")
@@ -76,13 +77,16 @@ def download_song(sid: str, artist: str=None, album_artist: str=None,
         return
 
     print(f"Downloading song {title} with id {sid}")
+    path = f"{path}{track}_{title.replace('/', '-')}.mp3" 
     if not args.dry:
         subprocess.run(["youtube-dl", "--add-metadata",
                         "--extract-audio", "--audio-format", "mp3",
                         "--output", "%(id)s.%(ext)s", 
                         f"https://www.youtube.com/watch?v={sid}"])
+        os.rename(f"{sid}.mp3", path)
 
-        f = eyed3.load(f"{sid}.mp3")
+    if not args.dry or args.write_tag:
+        f = eyed3.load(path)
         f.tag.artist = artist
         f.tag.album = album_title
         f.tag.album_artist = album_artist
@@ -90,9 +94,11 @@ def download_song(sid: str, artist: str=None, album_artist: str=None,
         f.tag.track_num = track
         # yyyy-mm-dd format for date
         f.tag.release_date = date
+        # image types documented here: https://eyed3.readthedocs.io/en/latest/eyed3.id3.html#eyed3.id3.frames.ImageFrame
+        r = requests.get(thumbnail_url)
+        imagedata = r.content
+        f.tag.images.set(1, imagedata, "image/jpeg", "icon image", None)
         f.tag.save()
-
-        os.rename(f"{sid}.mp3", f"{path}{track}_{title.replace('/', '-')}.mp3")
 
     cache.add(f"{pid}|{sid}")
     db.save_db(cache)
@@ -132,10 +138,10 @@ def download_playlist(bid: str, artist: str=None) -> None:
 
     print(f"Downloading playlist {title} with id {bid}")
     for i, song in enumerate(album["tracks"]):
+        # last element in thumbnails is highest resolution
         download_song(song["videoId"], parse_artists(song["artists"]), artists,
                       song["title"], title, int(song.get("index", i + 1)), date, 
-                      path, bid)
-
+                      path, bid, song["thumbnails"][-1]["url"])
     cache.add(bid)
     db.save_db(cache)
 
@@ -173,6 +179,9 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--simulate", dest="dry", 
                         action="store_true", default=False,
                         help="don't actually download music")
+    parser.add_argument("-t", "--tag", dest="write_tag",
+                        action="store_true", default=False,
+                        help="force update id3 tags even if running under --simulate")
     parser.add_argument("-i", "--input", dest="file", 
                         help="read URLs from a file")
     args = parser.parse_args()

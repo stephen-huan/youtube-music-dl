@@ -8,8 +8,8 @@ verify_ssl = true
 [packages]
 youtube-dl = "*"
 eyed3 = "*"
-ytmusicapi = {git = "https://github.com/sigma67/ytmusicapi"}
 requests-html = "*"
+ytmusicapi = "*"
 
 [requires]
 python_version = "3.8"
