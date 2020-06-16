@@ -31,9 +31,17 @@ def get_browse_id(url: str) -> str:
     session = HTMLSession()
     r = session.get(url)
     t = r.html.html
-    i = t.find("MPREb")
+    i = t.find("browseId") + 13
     l = t[i:].find("\\")
-    return t[i: i + l]
+    bid = t[i: i + l]
+    # re-search if found browse id is not valid
+    while bid == "SPunlimited":
+        t = t[i + l:]
+        i = t.find("browseId") + 13
+        l = t[i:].find("\\")
+        bid = t[i: i + l] 
+
+    return bid
 
 def get_type(url: str) -> tuple:
     """ Parses a url and returns the id, along with the type. """
@@ -46,6 +54,13 @@ def get_type(url: str) -> tuple:
     if "watch" in url:
         return (SONG, url.split("v=")[-1].split("&")[0])
     raise Exception("Provided URL is an invalid Youtube music link.")
+
+def parse_artists(artists: list) -> str:
+    """ Parses artists from a video. """
+    if isinstance(artists, str):
+        return artists
+
+    return ", ".join(artist["name"] for artist in artists)
 
 def download_song(sid: str, artist: str=None, album_artist: str=None, 
                   title: str="song", album_title: str="",
@@ -88,7 +103,17 @@ def download_playlist(bid: str, artist: str=None) -> None:
         print(f"Playlist {bid} is cached.")
         return
 
-    album = ytmusic.get_album(bid)
+    try:
+        album = ytmusic.get_album(bid)
+        rd = album["releaseDate"]
+        date = f"{rd['year']}-{rd['month']}-{rd['day']}"
+    # assumes playlist is album, this is for an actual playlist
+    except KeyError:
+        album = ytmusic.get_playlist(bid)
+        artist = album["author"]
+        # date is arbitrary because precise playlist creation dates are unknown 
+        date = f"{album['year']}-07-10"
+
     artists = ", ".join(a["name"] for a in album["artist"]) \
               if artist is None else artist
     title = album["title"]
@@ -105,13 +130,10 @@ def download_playlist(bid: str, artist: str=None) -> None:
         os.mkdir(path)
     path += "/"
 
-    rd = album["releaseDate"]
-    date = f"{rd['year']}{rd['month']}{rd['day']}"
-
     print(f"Downloading playlist {title} with id {bid}")
-    for song in album["tracks"]:
-        download_song(song["videoId"], song["artists"], artists,
-                      song["title"], title, int(song["index"]), date, 
+    for i, song in enumerate(album["tracks"]):
+        download_song(song["videoId"], parse_artists(song["artists"]), artists,
+                      song["title"], title, int(song.get("index", i + 1)), date, 
                       path, bid)
 
     cache.add(bid)
