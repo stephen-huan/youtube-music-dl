@@ -1,4 +1,4 @@
-import argparse, os, sys, subprocess, datetime
+import argparse, os, subprocess, datetime
 import requests
 from requests_html import HTMLSession
 from ytmusicapi import YTMusic
@@ -12,11 +12,6 @@ playlist: https://music.youtube.com/playlist?list=OLAK5uy_m9Ce3WCVVZXhHZNwdzaPQc
 browse: https://music.youtube.com/browse/MPREb_L3mB1OJ9weN
 song: https://music.youtube.com/watch?v=_mapaZYhg7c&list=RDAMVM_mapaZYhg7c
 """
-
-# bin hack
-path = sys.argv[-1]
-os.chdir(path)
-sys.argv = sys.argv[:-1]
 
 # setup youtube music
 # YTMusic.setup(filepath="headers_auth.json")
