@@ -9,10 +9,10 @@ verify_ssl = true
 youtube-dl = "*"
 eyed3 = "*"
 requests-html = "*"
-ytmusicapi = "*"
 audio2numpy = "*"
 numpy = "*"
 scipy = "*"
+ytmusicapi = "*"
 
 [requires]
 python_version = "3.8"

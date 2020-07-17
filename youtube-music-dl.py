@@ -143,13 +143,13 @@ def download_playlist(bid: str, artist: str=None) -> None:
 def download_artist(aid: str) -> None:
     """ Downloads all the content of an artist. """
     info = ytmusic.get_artist(aid)
-    albums = info["albums"]
-    singles = info["singles"]
+    albums = info.get("albums", {})
+    singles = info.get("singles", {})
     artist = info["name"] if args.overwrite else None
-    for album in albums["results"]:
+    for album in albums.get("results", []):
         download_playlist(album["browseId"], artist)
     # singles are just playlists with one song in them
-    for single in singles["results"]:
+    for single in singles.get("results", []):
         download_playlist(single["browseId"], artist)
 
 def download_url(url: str) -> None:
