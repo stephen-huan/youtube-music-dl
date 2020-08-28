@@ -35,7 +35,7 @@ def get_browse_id(url: str) -> str:
         t = t[i + l:]
         i = t.find("browseId") + 13
         l = t[i:].find("\\")
-        bid = t[i: i + l] 
+        bid = t[i: i + l]
 
     return bid
 
@@ -46,7 +46,7 @@ def get_type(url: str) -> tuple:
     if "playlist" in url:
         return (PLAYLIST, get_browse_id(url))
     if "browse" in url:
-        return (PLAYLIST, url.split("/")[-1]) 
+        return (PLAYLIST, url.split("/")[-1])
     if "watch" in url:
         return (SONG, url.split("v=")[-1].split("&")[0])
     raise Exception("Provided URL is an invalid Youtube music link.")
@@ -58,25 +58,25 @@ def parse_artists(artists: list) -> str:
 
     return ", ".join(artist["name"] for artist in artists)
 
-def download_song(sid: str, artist: str=None, album_artist: str=None, 
+def download_song(sid: str, artist: str=None, album_artist: str=None,
                   title: str="song", album_title: str="",
-                  track: int=1, date: str=None, 
+                  track: int=1, date: str=None,
                   path: str="", pid: str="", thumbnail_url: str=None) -> None:
     """ Downloads a song. """
     if args.cache and f"{pid}|{sid}" in cache:
         print("Song is cached.")
-        return 
+        return
 
     if sid is None:
         print("Cannot download song.")
         return
 
     print(f"Downloading song {title} with id {sid}")
-    path = f"{path}{track}_{title.replace('/', '-')}.mp3" 
+    path = f"{path}{track}_{title.replace('/', '-')}.mp3"
     if not args.dry:
         subprocess.run(["youtube-dl", "--add-metadata",
                         "--extract-audio", "--audio-format", "mp3",
-                        "--output", "%(id)s.%(ext)s", 
+                        "--output", "%(id)s.%(ext)s",
                         f"https://www.youtube.com/watch?v={sid}"])
         os.rename(f"{sid}.mp3", path)
 
@@ -120,7 +120,7 @@ def download_playlist(bid: str, artist: str=None) -> None:
     title = album["title"]
 
     path = artists.replace("/", "-")
-    
+
     if len(path) > 0:
         if not os.path.exists(path):
             os.mkdir(path)
@@ -135,7 +135,7 @@ def download_playlist(bid: str, artist: str=None) -> None:
     for i, song in enumerate(album["tracks"]):
         # last element in thumbnails is highest resolution
         download_song(song["videoId"], parse_artists(song["artists"]), artists,
-                      song["title"], title, int(song.get("index", i + 1)), date, 
+                      song["title"], title, int(song.get("index", i + 1)), date,
                       path, bid, song["thumbnails"][-1]["url"])
     cache.add(bid)
     db.save_db(cache)
@@ -162,23 +162,25 @@ if __name__ == "__main__":
     parser.add_argument("-v", "--version", action="version", version="1.0.0")
     parser.add_argument("-u", "--url", dest="url", type=str,
                         help="specifies the URL to download from")
-    parser.add_argument("-f", "--force", dest="cache", 
+    parser.add_argument("-f", "--force", dest="cache",
                         action="store_false", default=True,
                         help="disable song cache")
-    parser.add_argument("-l", "--list", dest="playlist_cache", 
+    parser.add_argument("-l", "--list", dest="playlist_cache",
                         action="store_false", default=True,
                         help="disable playlist cache")
-    parser.add_argument("-o", "--overwrite", dest="overwrite", 
+    parser.add_argument("-o", "--overwrite", dest="overwrite",
                         action="store_false", default=True,
                         help="don't overwrite the 'album_artist' tag")
-    parser.add_argument("-s", "--simulate", dest="dry", 
+    parser.add_argument("-s", "--simulate", dest="dry",
                         action="store_true", default=False,
                         help="don't actually download music")
     parser.add_argument("-t", "--tag", dest="write_tag",
                         action="store_true", default=False,
                         help="force update id3 tags even if running under --simulate")
-    parser.add_argument("-i", "--input", dest="file", 
+    parser.add_argument("-i", "--input", dest="file",
                         help="read URLs from a file")
+    parser.add_argument("-g", "--get", dest="get", type=str,
+                        help="get id of a URL")
     args = parser.parse_args()
 
     if args.file is not None:
@@ -191,9 +193,11 @@ if __name__ == "__main__":
                         download_url(url)
         else:
             print("Input file is not a valid path!")
-
     elif args.url is not None:
         download_url(args.url)
+    elif args.get is not None:
+        music_type, music_id = get_type(args.get)
+        print(f"{['Artist', 'Playlist', 'Song'][music_type]}: {music_id}")
     else:
         print("Nothing to do!")
 

@@ -12,7 +12,7 @@ def save_mp3(fname: str, data: np.array, rate: int) -> None:
     os.remove(fname + ".wav")
 
 try:
-    from audio_parser import parse_file 
+    from audio_parser import parse_file
 except ModuleNotFoundError:
     print("File-specific parser not found, using default parser")
     def parse_file(args: argparse.ArgumentParser, sr: int) -> list:
@@ -37,11 +37,11 @@ except ModuleNotFoundError:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ostlyser")
     parser.add_argument("-v", "--version", action="version", version="1.0.0")
-    parser.add_argument("-a", "--audio", dest="audio", required=True, 
+    parser.add_argument("-a", "--audio", dest="audio", required=True,
                         help="audio file to break up")
     parser.add_argument("-i", "--input", dest="file", required=True,
                         help="read timing information from a file")
-    parser.add_argument("-d", "--delimiter", dest="delim", default=":", 
+    parser.add_argument("-d", "--delimiter", dest="delim", default=":",
                         help="delimiter to split input file on")
     args = parser.parse_args()
 
@@ -62,4 +62,4 @@ if __name__ == "__main__":
         f.tag.artist = artist
         f.tag.track_num = i + 1
         f.tag.save()
-        
+
